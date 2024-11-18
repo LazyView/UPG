@@ -23,6 +23,7 @@ namespace UPG_SP_2024
             base.Dispose(disposing);
         }
 
+
         #region Windows Form Designer generated code
 
         /// <summary>
@@ -38,22 +39,32 @@ namespace UPG_SP_2024
             // 
             drawingPanel.Dock = DockStyle.Fill;
             drawingPanel.Location = new Point(0, 0);
-            drawingPanel.Name = "drawingPanel";            
-            drawingPanel.TabIndex = 0;            
+            drawingPanel.Margin = new Padding(3, 4, 3, 4);
+            drawingPanel.Name = "drawingPanel";
+            drawingPanel.Size = new Size(800, 600);
+            drawingPanel.TabIndex = 0;
+            drawingPanel.Text = "Electrostatic Field Visualization";
+            drawingPanel.Paint += drawingPanel_Paint;
+            drawingPanel.MouseClick += drawingPanel_MouseClick;
+            drawingPanel.MouseDown += drawingPanel_MouseDown;
+            drawingPanel.MouseUp += drawingPanel_MouseUp;
             // 
             // MainForm
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;            
+            AutoScaleDimensions = new SizeF(8F, 20F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(800, 600);
             Controls.Add(drawingPanel);
+            Margin = new Padding(3, 4, 3, 4);
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "<Osobní číslo> - Semestrální práce KIV/UPG 2024/2025";
+            Text = "<A23B0072P> - Semestrální práce KIV/UPG 2024/2025";
+            Load += MainForm_Load;
             ResumeLayout(false);
         }
 
         #endregion
 
-        private Panel drawingPanel;
+        private DrawingPanel drawingPanel;
     }
 }
