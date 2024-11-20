@@ -47,6 +47,7 @@ namespace UPG_SP_2024
             drawingPanel.Paint += drawingPanel_Paint;
             drawingPanel.MouseClick += drawingPanel_MouseClick;
             drawingPanel.MouseDown += drawingPanel_MouseDown;
+            drawingPanel.MouseMove += drawingPanel_MouseMove;
             drawingPanel.MouseUp += drawingPanel_MouseUp;
             // 
             // MainForm

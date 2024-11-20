@@ -12,18 +12,24 @@ namespace UPG_SP_2024
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             string parameter;
+            int gridGapWidth;
+            int gridGapHeight;
             if (args.Length > 0)
             {
-                // Use the provided parameter
+                // Use the provided parameters
                 parameter = args[0];
-                // Integrate the parameter into the application logic
+
+                gridGapWidth = Convert.ToInt32(args[1] + args[2]);
+                gridGapHeight = Convert.ToInt32(args[4] + args[5]);
             }
             else
             {
                 parameter = "0";
+                gridGapWidth = 30;
+                gridGapHeight = 30;
             }
             // Create the MainForm and pass the parameter to it
-            using (var mainForm = new MainForm(parameter))
+            using (var mainForm = new MainForm(parameter, gridGapWidth, gridGapHeight))
             {
                 mainForm.Show();
                 Application.Run(mainForm);

@@ -1,2 +1,2 @@
-@echo off
-bin\ElectricFieldVis.exe %1
+
+bin\ElectricFieldVis.exe %4

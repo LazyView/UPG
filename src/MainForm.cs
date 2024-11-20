@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace UPG_SP_2024
@@ -8,11 +9,13 @@ namespace UPG_SP_2024
         private double mouseOrX;
         private double mouseOrY;
 
-        public MainForm(string? parameter = null)
+        public MainForm(string parameter, int gridGapWidth, int gridGapHeight)
         {
             InitializeComponent();
             // Store the parameter in a field or use it to initialize the DrawingPanel
             this.drawingPanel.parameter = parameter;
+            this.drawingPanel.gridCellWidth = gridGapWidth;
+            this.drawingPanel.gridCellHeight = gridGapHeight;
             this.Size = new Size(800, 600);
             BackColor = Color.LightGoldenrodYellow;
         }
@@ -27,23 +30,27 @@ namespace UPG_SP_2024
 
         private void drawingPanel_MouseClick(object sender, MouseEventArgs e)
         {
-            while (true) {
-                drawingPanel.mouseClick = true;
-            }
+            drawingPanel.mouseClick = true;
+            drawingPanel.mouseX = e.X;
+            drawingPanel.mouseY = e.Y;
         }
 
         private void drawingPanel_MouseDown(object sender, MouseEventArgs e)
         {
             drawingPanel.mouseDown = true;
-            mouseOrX = e.X;
-            mouseOrY = e.Y;
         }
 
         private void drawingPanel_MouseUp(object sender, MouseEventArgs e)
         {
-            drawingPanel.mouseX = e.X - mouseOrX;
-            drawingPanel.MouseY = e.Y - mouseOrY;
             drawingPanel.mouseDown = false;
+        }
+
+        private void drawingPanel_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left) {
+            drawingPanel.mouseX = (e.X - mouseOrX);
+            drawingPanel.mouseY =(e.Y - mouseOrY);
+            }
         }
     }
 }

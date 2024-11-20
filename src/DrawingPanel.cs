@@ -9,19 +9,31 @@ namespace UPG_SP_2024
     /// The main panel with the custom visualization
     /// </summary>
     public class DrawingPanel : Panel
-    {
+    {   
+        //---- public variables ---- //
         public string parameter;
-        private int m_Start;
-        private float elapsed;
-        private double power;
-        double[,] positions;
-        private int gridGapX;
-        private int gridGapY;
-        private double gridPower;
+        public int[] coordinates;
+        public int gridCellWidth;
+        public int gridCellHeight;
+        // Mouse handeling
         public double mouseX;
-        public double MouseY;
+        public double mouseY;
         public bool mouseDown;
         public bool mouseClick;
+
+        //-------------------------------//
+        
+        //---- private variables ----//
+        private float scale;
+        private int m_Start;
+        private float elapsed;
+        // Storing the values for positions and charges
+        private double[,] positions;
+        private double[] charges;
+        // Size of the grid cell width and height
+        
+        
+        
         /// <summary>Initializes a new instance of the <see cref="DrawingPanel" /> class.</summary>
         public DrawingPanel()
         {
@@ -31,7 +43,6 @@ namespace UPG_SP_2024
             timer.Interval = 50;
             m_Start = Environment.TickCount;
             timer.Start();
-
             // Anti-flickerring.
             DoubleBuffered = true;
         }
@@ -41,30 +52,28 @@ namespace UPG_SP_2024
             this.Invalidate();
         }
 
-        /// <summary>TODO: Custom visualization code comes into this method</summary>
+        /// <summary>Main function where everything draws on the drawingPanel</summary>
         /// <remarks>Raises the <see cref="E:System.Windows.Forms.Control.Paint">Paint</see> event.</remarks>
         /// <param name="e">A <see cref="T:System.Windows.Forms.PaintEventArgs">PaintEventArgs</see> that contains the event data.</param>
         protected override void OnPaint(PaintEventArgs e)
         {
-            // Graphic context.
+            //-------------------------------//
             Graphics g = e.Graphics;
-
-            // Codes for better looking visualisation.
+            //-------------------------------//
             g.TextRenderingHint = TextRenderingHint.AntiAlias;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-
-            //Translation of the system.
+            //-------------------------------//
             g.TranslateTransform(this.Width / 2, this.Height / 2);
-            // Scaling.
+            //-------------------------------//
             var scalenumber = 0.005f;
             var scalex = this.Width * scalenumber;
             var scaley = this.Height * scalenumber;
-            var scale = Math.Min(scalex, scaley);
-            
+            scale = Math.Min(scalex, scaley);
+
+            //-------------------------------//
             parameter = "4";
-            // Scenarios.
-            Scenarious(g, parameter, scale);
+            Scenarious(g, parameter);
         }
 
         /// <summary>
@@ -81,126 +90,137 @@ namespace UPG_SP_2024
         /// <summary>
         /// Chooses right scenario and draws it onto drawingPanel.
         /// </summary>
-        /// <param name="g"></param>
-        /// <param name="parameter"></param>
-        /// <param name="scale"></param>
-        private void Scenarious(Graphics g, string parameter, float scale)
+        /// <param name="g"> Graphics content </param>
+        /// <param name="parameter"> Decides which scenerio to play </param>
+        /// <param name="scale"> Scaling variable </param>
+        private void Scenarious(Graphics g, string parameter)
         {
-            Probe p = new Probe();
-            Grid grid = new Grid();
-            gridGapX = 20;
-            gridGapY = 20;
-            grid.BackgroundGrid(g, gridGapX, gridGapY, this.Width, this.Height, scale);
-           
+            gridCellWidth = 40;
+            gridCellHeight = 40;
+            
+            elapsed = (Environment.TickCount - m_Start) / 1000f;
+            
             switch (parameter)
             {
                 case "0":
-                    Charge ch01 = new Charge(new double[] { 0, 0 }, 1);
-                    ch01.Add(g, scale);
-                    // Inicialization of arrays which will be held to compute the intensity.
+                    //-------------------------------//
+                    Charge ch01 = new(new double[] { 0, 0 }, 1);
+                    //-------------------------------//
                     positions = new double[1, 2] { { 0, 0 } };
-                    elapsed = (Environment.TickCount - m_Start) / 1000f;
-                    power = p.Calculate_Intensity(new double[] {ch01.GetCharge()}, positions, elapsed);
-                    p.AddVector(g, scale, power);
-                    //g.TranslateTransform(-this.Width/2, -this.Height/2);
-                    /*
-                    for (int y = 0; y < this.Height; y += gridGapY)
-                    {
-                        for (int x = 0; x < this.Width; x += gridGapX)
-                        {
-                            gridPower = grid.calculate_intensity_static(x - this.Width/2, y - this.Height/2, charges, positions, elapsed);
-                            grid.addGridVector(g, gridGapX, gridGapY, scale, this.Width, this.Height);
-
-                        }
-                    }
-                    */
+                    charges = new double[] { ch01.GetCharge() };
+                    //-------------------------------//
+                    Probe p0 = new(elapsed, this.Width, this.Height, charges, positions);
+                    Grid grid0 = new(gridCellWidth, gridCellHeight, this.Width, this.Height, charges, positions);
+                    //-------------------------------//
+                    grid0.Add_Heat_Map_Background(g, scale);
+                    grid0.BackgroundGrid(g, scale);
+                    grid0.Add_Grid_Vectors(g, scale);
+                    ch01.Add(g, scale);
+                    p0.AddVector(g, scale);
+                    
                     break;
                     
                 case "1":
-                    Charge ch11 = new Charge( new double[]{ -1, 0}, 1);
-                    Charge ch12 = new Charge(new double[] {1, 0}, 1);
-                    // Inicialization of arrays which will be held to compute the intensity.
+                    //-------------------------------//
+                    Charge ch11 = new(new double[] { -1, 0 }, 1);
+                    Charge ch12 = new(new double[] { 1, 0 }, 1);
+                    //-------------------------------//
                     positions = new double[2, 2] { { -1, 0 }, { 1, 0 } };
+                    charges = new double[] { ch11.GetCharge(), ch12.GetCharge() };
+                    //-------------------------------//
+                    Probe p1 = new(elapsed, this.Width, this.Height, charges, positions);
+                    Grid grid1 = new(gridCellWidth, gridCellHeight, this.Width, this.Height, charges, positions);
+                    //-------------------------------//
+                    grid1.Add_Heat_Map_Background(g, scale);
+                    grid1.BackgroundGrid(g, scale);
+                    grid1.Add_Grid_Vectors(g, scale);
                     ch11.Add(g, scale);
                     ch12.Add(g, scale);
-                    elapsed = (Environment.TickCount - m_Start) / 1000f;
-                    power = p.Calculate_Intensity(new double[] {ch11.GetCharge(), ch12.GetCharge()}, positions, elapsed);
-                    p.AddVector(g, scale, power);
-                    /*
-                    for (int y = 0; y < this.Height; y += gridGapY)
-                    {
-                        for (int x = 0; x < this.Width; x += gridGapX)
-                        {
-                            gridPower = grid.calculate_intensity_static(x / this.Width, y / this.Width, charges, positions, elapsed);
-                            grid.addGridVector(g, gridGapX, gridGapY, scale, this.Width, this.Height);
-
-                        }
-                    }
-                    */
+                    p1.AddVector(g, scale);
                     break;
                     
                     
                 case "2":
-                    Charge ch21 = new Charge(new double[] { -1, 0 }, -1);
-                    Charge ch22 = new Charge(new double[] { 1, 0 }, 2);
-                    // Inicialization of arrays which will be held to compute the intensity.
-                    positions = new double[2, 2] { { -1, 0 }, { 1, 0 } };
+                    //-------------------------------//
+                    Charge ch21 = new(new double[] { -1, 0 }, -1);
+                    Charge ch22 = new(new double[] { 1, 0 }, 2);
+                    //-------------------------------//
+                    positions = new double[2, 2] { { -1, 0 },{ 1, 0 } };
+                    charges = new double[]{ ch21.GetCharge(), ch22.GetCharge() };
+                    //-------------------------------//
+                    Probe p2 = new(elapsed, this.Width, this.Height, charges, positions);
+                    Grid grid2 = new(gridCellWidth, gridCellHeight, this.Width, this.Height, charges, positions);
+                    //-------------------------------//
+                    grid2.Add_Heat_Map_Background(g, scale);
+                    grid2.BackgroundGrid(g, scale);
+                    grid2.Add_Grid_Vectors(g, scale);
                     ch21.Add(g, scale);
                     ch22.Add(g, scale);
-                    elapsed = (Environment.TickCount - m_Start) / 1000f;
-                    power = p.Calculate_Intensity(new double[] {ch21.GetCharge(), ch22.GetCharge()}, positions, elapsed);
-                    p.AddVector(g, scale, power);
-                    
-                    for (int y = 0; y < this.Height; y += gridGapY)
-                    {
-                        for (int x = 0; x < this.Width; x += gridGapX)
-                        {
-                            gridPower = grid.Calculate_intensity_static(-this.Width / 2 + x, -this.Height / 2 + y, new float[] {ch21.GetCharge(), ch22.GetCharge() }, positions, elapsed, this.Width, this. Height);
-                            grid.addGridVector(g, gridGapX, gridGapY, scale, this.Width, this.Height);
-
-                        }
-                    }
-                    
+                    p2.AddVector(g, scale);
                     break;
                     
                 case "3":
-                    Charge ch31 = new Charge( new double[]{-1, -1 }, 1);
-                    Charge ch32 = new Charge(new double[] {1, -1 }, 2);
-                    Charge ch33 = new Charge(new double[] { 1, 1 }, -3);
-                    Charge ch34 = new Charge(new double[] { -1, 1 }, -4);
-                    elapsed = (Environment.TickCount - m_Start) / 1000f;
+                    //-------------------------------//
+                    Charge ch31 = new(new double[]{ -1, -1 }, 1);
+                    Charge ch32 = new(new double[] { 1, -1 }, 2);
+                    Charge ch33 = new(new double[] { 1, 1 }, -3);
+                    Charge ch34 = new(new double[] { -1, 1 }, -4);
+                    //-------------------------------//
+                    positions = new double[4, 2] { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } };
+                    charges = new double[] { ch31.GetCharge(), ch32.GetCharge(), ch33.GetCharge(), ch34.GetCharge() };
+                    //-------------------------------//
+                    Probe p3 = new(elapsed, this.Width, this.Height, charges, positions);
+                    Grid grid3 = new(gridCellWidth, gridCellHeight, this.Width, this.Height, charges, positions);
+                    //-------------------------------//
+                    grid3.Add_Heat_Map_Background(g, scale);
+                    grid3.BackgroundGrid(g, scale);
+                    grid3.Add_Grid_Vectors(g, scale);
                     ch31.Add(g, scale);
                     ch32.Add(g, scale);
                     ch33.Add(g, scale);
                     ch34.Add(g, scale);
-                    // Inicialization of arrays which will be held to compute the intensity.
-                    positions = new double[4, 2] { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } };
-                    power = p.Calculate_Intensity(new double[] {ch31.GetCharge(), ch32.GetCharge(), ch33.GetCharge(), ch34.GetCharge() }, positions, elapsed);
-                    p.AddVector(g, scale, power);
-                    /*
-                    for (int y = 0; y < this.Height; y += gridGapY)
-                    {
-                        for (int x = 0; x < this.Width; x += gridGapX)
-                        {
-                            gridPower = grid.calculate_intensity_static(-this.Width / 2 + x, -this.Height / 2 + y, charges, positions, elapsed);
-                            grid.addGridVector(g, gridGapX, gridGapY, scale, this.Width, this.Height);
-                        }
-                    }
-                    
-                    */
+                    p3.AddVector(g, scale);
                     break;
                     
                 case "4":
-                    Charge ch41 = new Charge(new double[] { -1, 0 }, elapsed, 1, scale);
-                    Charge ch42 = new Charge(new double[] { 1, 0 }, elapsed, 2, scale);
+                    //-------------------------------//
+                    Charge ch41 = new(new double[] { -1, 0 }, elapsed, 1);
+                    Charge ch42 = new(new double[] { 1, 0 }, elapsed, 2);
+                    //-------------------------------//
+                    positions = new double[2, 2] { { -1, 0 }, { 1, 0 } };
+                    charges = new double[] { ch41.GetCharge(), ch42.GetCharge() };
+                    //-------------------------------//
+                    Probe p4 = new(elapsed, this.Width, this.Height, charges, positions);
+                    Grid grid4 = new(gridCellWidth, gridCellHeight, this.Width, this.Height, charges, positions);
+                    //-------------------------------//
+                    grid4.Add_Heat_Map_Background(g, scale);
+                    grid4.BackgroundGrid(g, scale);
+                    grid4.Add_Grid_Vectors(g, scale);
                     ch41.Add(g, scale);
                     ch42.Add(g, scale);
-                    positions = new double[2, 2] { { -1, 0 }, { 1, 0 } };
-                    elapsed = (Environment.TickCount - m_Start) / 1000f;
-                    power = p.Calculate_Intensity(new double[] {ch41.GetCharge(), ch42.GetCharge()}, positions, elapsed);
-                    p.AddVector(g, scale, power);
+                    p4.AddVector(g, scale);
                     break;
+                    
             }
+            
+        }
+
+        /// <summary>
+        /// Creates a static probe when mouse is clicked.
+        /// </summary>
+        /// <param name="g"> Graphics context </param>
+        private void Probe_Static(Graphics g)
+        {
+            
+            if (mouseClick)
+            {
+                g.TranslateTransform(-Width / 2, -Height / 2);
+                double[] mouse_Position = [mouseX, mouseY];
+                Probe probe = new(mouse_Position, this.Width, this.Height, charges, positions);
+                var old = g.Transform;
+                probe.AddProbeStatic(g, scale);
+                g.Transform = old;
+            };
         }
     }
 }

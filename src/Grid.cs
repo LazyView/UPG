@@ -1,30 +1,47 @@
-﻿namespace ElectricFieldVis
+﻿using System.ComponentModel.DataAnnotations;
+using System.IO.IsolatedStorage;
+
+namespace ElectricFieldVis
 {
-    public class Grid
+
+    /// <summary>
+    /// Constructor of class Grid, takes most of parameters common for all functions.
+    /// </summary>
+    /// <param name="gridCellWidth"> Grid cell width </param>
+    /// <param name="gridCellHeight"> Grid cell height </param>
+    /// <param name="width"> Width of the drawingPanel </param>
+    /// <param name="height"> Height of the drawingPanel</param>
+    /// <param name="charges"> Array of the charge </param>
+    /// <param name="positions"> Array of position of charges arrays </param>
+    internal class Grid(int gridCellWidth, int gridCellHeight, int width, int height, double[] charges, double[,] positions)
     {
-        private float[] gridPosition;
+        private float[] gridPosition = new float[4];
+        private int gridCellWidth = gridCellWidth;
+        private int gridCellHeight = gridCellHeight;
+        private double[] charges = charges;
+        private double[,] positions = positions;
+        private int width = width;
+        private int height = height;
 
 
-        public Grid() { }
         /// <summary>
-        /// Draws a grid in the background using DrawLine function.
+        /// Draws a grid in the background.
         /// </summary>
         /// <param name="g"> Graphics context </param>
         /// <param name="x"> Width gap in between lines </param>
         /// <param name="y"> Height gap in between lines</param>
         /// <param name="width"> Width of the drawingPanel </param>
         /// <param name="height"> Height of the drawingPanel</param>
-        public void BackgroundGrid(Graphics g, int x, int y, int width, int height, float scale)
+        public void BackgroundGrid(Graphics g, float scale)
         {
             var s = g.Transform;
-            Pen p = new Pen(Brushes.Gray, 1f);
+            Pen p = new Pen(Brushes.Black, 1f);
             g.TranslateTransform(-width/2, -height/2);
-            
-            for(int i = 0;i < height; i = i + x)
+            for(int i = 0;i < height; i = i + gridCellHeight)
             {
                 g.DrawLine(p, 0, i, width, i);
 
-                for(int j = 0;j < width; j = j + y)
+                for(int j = 0;j < width; j = j + gridCellWidth)
                 {
                     g.DrawLine(p, j, 0, j, height);
                 }
@@ -32,77 +49,71 @@
             g.Transform = s;
         }
 
-        public double Calculate_intensity_static(double x, double y, float[] charges, int[,] positions, float elapsed, int width, int height)
+        /// <summary>
+        /// Calculates the coordinates for the arrowheads in the grid.
+        /// </summary>
+        /// <param name="x"> x position in the electrostat. field (without scale)</param>
+        /// <param name="y"> y position in the electrostat. field (without scale)</param>
+        public double Calculate_Grid_Vector_Coord_And_Intensity(double x, double y)
         {
-            double X = (x + width/2) / width;
-            double Y = (y + height/2) / height;
+            double X = x;
+            double Y = y;
 
             // Defining size of vector.
-            gridPosition = new float[4] { (float)X, (float)Y, 0, 0 };
+            gridPosition = new float[4] { 0, 0, 0, 0 };
             double epsilonZero = 8.854e-12;
             double firstPart = (1 / (4 * Math.PI * epsilonZero));
             double[] coordXY = new double[2] { 0, 0 };
-
+            double[] coordXY_Color_Scale = new double[2] { 0, 0 };
             for (int i = 0; i < charges.Length; i++)
             {
-                double chargeX = positions[i, 0];
-                double chargeY = -positions[i, 1];
-                double nX = X - chargeX;
-                double nY = Y - chargeY;
+                double nX = X - positions[i, 0];
+                double nY = Y + positions[i, 1];
                 double magnitude = Math.Pow(nX * nX + nY * nY, 1.5);
                 coordXY[0] += (charges[i] * (nX / magnitude));
                 coordXY[1] += (charges[i] * (nY / magnitude));
+                coordXY_Color_Scale[0] += (Math.Pow(Math.Abs(charges[i]), 2) * charges[i] * (nX / magnitude));
+                coordXY_Color_Scale[1] += (Math.Pow(Math.Abs(charges[i]), 2) * charges[i] * (nY / magnitude));
             }
             // Vector of intensity.
-            double[] coulombXY = new double[2] { coordXY[0] * firstPart, coordXY[1] * firstPart };
-
+            double[] coulombXY = [coordXY[0] * firstPart, coordXY[1] * firstPart];
+            double[] coulombXY_Color_Scale = [coordXY_Color_Scale[0] * firstPart, coordXY_Color_Scale[1] * firstPart];
             // Calculation of magnitude.
-            double nMagnitude = Math.Sqrt(coulombXY[0] * coulombXY[0] + coulombXY[1] * coulombXY[1]) * 3;
+            double nMagnitude = Math.Sqrt(coulombXY[0] * coulombXY[0] + coulombXY[1] * coulombXY[1]);
 
             // Assigning final coordinates of vector.
-            gridPosition[0] = (float)x;
-            gridPosition[1] = (float)y;
+            gridPosition[0] = (float)X;
+            gridPosition[1] = (float)Y;
             gridPosition[2] = (float)(X + (coulombXY[0] / nMagnitude));
             gridPosition[3] = (float)(Y + (coulombXY[1] / nMagnitude));
-
-            return nMagnitude;
+            return Math.Sqrt(coulombXY_Color_Scale[0] * coulombXY_Color_Scale[0] + coulombXY_Color_Scale[1] * coulombXY_Color_Scale[1]);
         }
 
-        public void addGridVector(Graphics g, float gapX, float gapY, float scale, double width, double height)
+        /// <summary>
+        /// Draws a vector using coordinates from Calculate_Intensity_Static.
+        /// </summary>
+        /// <param name="g"> Graphics context </param>
+        /// <param name="scale"> Scaling variable </param>
+        public void Grid_Vector(Graphics g, float scale)
         {
-            // Scaling the coordinates.
-            gridPosition[0] -= gapX / 2;
-            gridPosition[1] -= gapY / 2;
-            gridPosition[2] -= gapX / 2;
-            gridPosition[3] -= gapY / 2;
-
-            // Calculate the direction vector and its length.
-            double u_x = gridPosition[2] - gridPosition[0];
-            double u_y = gridPosition[3] - gridPosition[1];
-            double length = (float)5;
-
-            // Normalize the direction vector if length is greater than zero.
-            if (length > 0)
-            {
-                u_x /= length;
-                u_y /= length;
-            }
-            else
-            {
-                // If length is zero, default direction (arbitrary).
-                u_x = 1;
-                u_y = 0;
-            }
-
-            // Calculate length and position of the arrowhead.
-            double tipLength = 2f * scale; // Length of the arrowhead.
+            gridPosition[0] *= 50 * scale;
+            gridPosition[1] *= 50 * scale;
+            gridPosition[2] *= 50 * scale;
+            gridPosition[3] *= 50 * scale;
+            
+            
+            double tipLength = 5f * Math.Min(gridCellWidth / 15, gridCellHeight / 15); // Length of the arrowhead.
             double tipAngle = (double)(Math.PI / 6); // 30 degrees for arrowhead angle.
 
-            // Position of the arrow shaft end.
-            float c_x = gridPosition[2];
-            float c_y = gridPosition[3];
+            // Calculates the center of the shell.
+            float c_x = gridPosition[0] + gridCellWidth / 2;
+            float c_y = gridPosition[1] + gridCellHeight / 2;
 
-            // Calculate the points of the arrowhead.
+            // Calculates the direction vector.
+            double u_x = gridPosition[2] - gridPosition[0];
+            double u_y = gridPosition[3] - gridPosition[1];
+
+            // Calculates the points of the arrowhead.
             double angle1 = Math.Atan2(u_y, u_x) + tipAngle; // Right side of the arrowhead.
             double angle2 = Math.Atan2(u_y, u_x) - tipAngle; // Left side of the arrowhead.
 
@@ -110,53 +121,118 @@
             float e_y1 = (float)(c_y - tipLength * Math.Sin(angle1));
             float e_x2 = (float)(c_x - tipLength * Math.Cos(angle2));
             float e_y2 = (float)(c_y - tipLength * Math.Sin(angle2));
-         
 
-            // Drawing the probe, arrow and description.
-            g.DrawLine(Pens.Black, gridPosition[0], gridPosition[1], gridPosition[2], gridPosition[3]); // Draw the arrow line.
-            g.DrawLine(Pens.Black, c_x, c_y, e_x1, e_y1); // Right side of the arrowhead.
-            g.DrawLine(Pens.Black, c_x, c_y, e_x2, e_y2); // Left side of the arrowhead.
+            Pen p = new Pen(Brushes.Black, 1f);
+
+            g.DrawLine(p, c_x, c_y, e_x1, e_y1); // Right side of the arrowhead.
+            g.DrawLine(p, c_x, c_y, e_x2, e_y2); // Left side of the arrowhead.
+
+
         }
 
-        public Color GetColorForIntensity(double intensity, double maxIntensity)
+        /// <summary>
+        /// Applies the two functions above to calculate the coordinates and draw all needed vectors in the background.
+        /// </summary>
+        /// <param name="g"> Grapics context </param>
+        /// <param name="scale"> Scaling variable </param>
+        public void Add_Grid_Vectors(Graphics g, float scale)
         {
-            // Normalize the intensity to a value between 0 and 1.
-            double normalized = intensity / maxIntensity;
-            int r = (int)(normalized * 255);
-            int g = (int)((1 - normalized) * 255);
-            return Color.FromArgb(r, g, 0); // Gradient from red to green.
+            for (int y = -height / 2; y < height/2; y += gridCellHeight)
+            {
+                for (int x = -width / 2; x < width/2; x += gridCellWidth)
+                {   
+                    // Getting non-scaled values for x and y
+                    double X = x / (50 * scale);
+                    double Y = y / (50 * scale);
+                    Calculate_Grid_Vector_Coord_And_Intensity(X, Y);
+                    Grid_Vector(g, scale);
+                }
+            }
         }
-
-        public void DrawHeatMap(Graphics g, int width, int height, int gridGapX, int gridGapY, float[] charges, int[,] positions, float elapsed)
+        
+        /// <summary>
+        /// Draws a heatmap as a background.
+        /// </summary>
+        /// <param name="g"> Graphics context </param>
+        /// <param name="scale"> Scale variable </param>
+        public void Add_Heat_Map_Background(Graphics g, float scale)
         {
             double maxIntensity = 0;
-            double intensity1 = 100;
-            // First pass: determine the maximum intensity
-            for (int i = 0; i < height; i += gridGapY)
+            // First iterates through the field to look for the maximum value
+            for (int y = -height / 2; y < height / 2; y += 5)
             {
-                for (int j = 0; j < width; j += gridGapX)
+                for (int x = -width / 2; x < width / 2; x += 5)
                 {
-                    intensity1 = Calculate_intensity_static(j / (double)gridGapX, i / (double)gridGapY, charges, positions, elapsed, width, height);
-                    if (intensity1 > maxIntensity)
+                    double X = x / (50 * scale);
+                    double Y = y / (50 * scale);
+                    double intensity = Calculate_Grid_Vector_Coord_And_Intensity(X, Y);
+
+                    // Ignore super-high values in order to get reasonable maximum. (probably not optimal solution, but after 2h of trying to fix it feels like very good solution)
+                    if (intensity > 10000000000)
                     {
-                        maxIntensity = intensity1;
+                        continue;
+                    };
+
+                    // Update maxIntensity if a higher intensity is found.
+                    if (intensity > maxIntensity)
+                    {
+                        maxIntensity = intensity;
                     }
                 }
             }
 
-            // Second pass: draw the heat map
-            for (int i = 0; i < height; i += gridGapY)
+            double minIntensity = Double.MaxValue;
+            // Second iteration draws the background
+            for (int y = -height/2; y < height/2; y += 10)
             {
-                for (int j = 0; j < width; j += gridGapX)
+                for (int x = -width/2; x < width/2; x += 10)
                 {
-                    intensity1 = Calculate_intensity_static(j / (double)gridGapX, i / (double)gridGapY, charges, positions, elapsed, width, height);
-                    Color color = GetColorForIntensity(intensity1, maxIntensity);
-                    using (Brush brush = new SolidBrush(color))
+                    
+                    double X = x / (50 * scale);
+                    double Y = y / (50 * scale);
+                    double intensity = Calculate_Grid_Vector_Coord_And_Intensity(X, Y);
+                    if (intensity < minIntensity)
                     {
-                        g.FillRectangle(brush, j, i, gridGapX, gridGapY);
+                        minIntensity = intensity;
                     }
+                    Color col = GetColorForIntensity(intensity, minIntensity, maxIntensity);
+                    Brush br = new SolidBrush(col);
+                    g.FillRectangle(br, x - 5 / 2, y - 5 / 2, 10, 10);
                 }
             }
+        }
+
+        /// <summary>
+        /// Calculates the normalized value for colors, which decides what shade and color will be used.
+        /// </summary>
+        /// <param name="intensity"> Intensity of the field at specific point </param>
+        /// <param name="maxIntensity"> Maximum itensity of the field </param>
+        /// <param name="minIntensity"> Minimum intensity of the field </param>
+        /// <returns> Return a result of function Choose_color </returns>
+        public Color GetColorForIntensity(double intensity, double minIntensity, double maxIntensity)
+        {
+            // Normalize the intensity between 0 and 1.
+            double normalized = (maxIntensity + minIntensity) / (maxIntensity + intensity);
+            Color green = Color.FromArgb(0, 255, 0);    // Green
+            Color yellow = Color.FromArgb(255, 255, 0); // Yellow
+
+            // Interpolate between Yellow and Green based on normalized intensity.
+            return Choose_Color(yellow, green, normalized);
+        }
+
+        /// <summary>
+        /// Calculates how much of red, green and blue color should be used in order to achieve desired color.
+        /// </summary>
+        /// <param name="color1"> Yellow color </param>
+        /// <param name="color2"> Green color </param>
+        /// <param name="t"> normalized value </param>
+        /// <returns> returns a specific rgb color </returns>
+        public Color Choose_Color(Color color1, Color color2, double t)
+        {
+            int r = (int)(color1.R + t * (color2.R - color1.R));
+            int g = (int)(color1.G + t * (color2.G - color1.G));
+            int b = (int)(color1.B + t * (color2.B - color1.B));
+            return Color.FromArgb(r, g, b);
         }
     }
 }
